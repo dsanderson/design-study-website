@@ -58,9 +58,9 @@ render_table model =
     CombinatorNode operation _ children ->
       case operation of
         Product ->
-          tr [] [ ( td [] [ (text "Product") ] ), (td [] (List.map render_table children ) ) ]
+          table [] [ tbody [] [tr [] [ ( td [] [ (text "⊗") ] ), (td [] (List.map render_table children )) ]]]
         Sum ->
-          tr [] [ ( td [] [ (text "Sum") ] ), (td [] (List.map render_table children ) ) ]
+          table [] [ tbody [] [tr [] [ ( td [] [ (text "⊕") ] ), (td [] (List.map render_table children )) ]]]
 
 parse_range : Data -> String
 parse_range data =
