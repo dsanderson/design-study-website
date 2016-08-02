@@ -1,5 +1,6 @@
 import Html exposing ( .. )
 import Html.App
+import Html.Attributes
 import String
 import List
 
@@ -11,22 +12,23 @@ type Operation = Sum | Product
 type alias Data = String
 type Node_type = Range | Set | Search
 type alias ListTree = List Tree
-type Tree = LeafNode Label Node_type Node_id Data | CombinatorNode Operation Node_id ListTree
+type Tree = LeafNode Label Node_type Node_id Data | CombinatorNode Operation Node_id ListTree | Empty
+type Page_State = Empty | Edit Node_id
 
 main = Html.App.beginnerProgram { model = default_model, view = view, update = update }
 
 -- MODEL
 
-type alias Model = Tree
+type alias Model = { maxID:Int, state:Page_State, tree:Tree }
 
 default_model : Model
-default_model =
-  CombinatorNode Product 1 [ LeafNode "Shaft Type" Set 2 "Keyed|D|Round",
+default_model = { maxID = 5,
+  tree = CombinatorNode Product 1 [ LeafNode "Shaft Type" Set 2 "Keyed|D|Round",
     CombinatorNode Sum 3 [
       LeafNode "Shaft Diameter" Range 4 "1.0|2.0|4",
       LeafNode "Shaft Diameter" Range 5 "3.0|5.0|4"
     ]
-  ]
+  ]}
 
 -- UPDATE
 
@@ -41,10 +43,9 @@ update msg model =
 
 view : Model -> Html Msg
 view model =
-  div []
-    [ table [] [ tbody [] [ render_table model ] ] ]
+  div [] [ render_table model.tree ]
 
-render_table : Model -> Html Msg
+render_table : Tree -> Html Msg
 render_table model =
   case model of
     LeafNode label node_type _ data ->
@@ -58,9 +59,11 @@ render_table model =
     CombinatorNode operation _ children ->
       case operation of
         Product ->
-          table [] [ tbody [] [tr [] [ ( td [] [ (text "⊗") ] ), (td [] (List.map render_table children )) ]]]
+          table [] [ tbody [] [tr [] [ ( td [] [ (text "×") ] ), (td [ Html.Attributes.class "children-table" ] (List.map render_table children )) ]]]
         Sum ->
-          table [] [ tbody [] [tr [] [ ( td [] [ (text "⊕") ] ), (td [] (List.map render_table children )) ]]]
+          table [] [ tbody [] [tr [] [ ( td [] [ (text "+") ] ), (td [ Html.Attributes.class "children-table" ] (List.map render_table children )) ]]]
+    Empty ->
+      table [] []
 
 parse_range : Data -> String
 parse_range data =
