@@ -20,6 +20,8 @@ type alias LinkList = List Link
 
 type Page_State = Empty | Edit NodeId
 
+type alias RangeData = (Int,Int,Int)
+
 main = Html.App.beginnerProgram { model = default_model, view = view, update = update }
 
 -- MODEL
@@ -48,7 +50,12 @@ update msg model =
 
 view : Model -> Html Msg
 view model =
-  div [] [ render_table model.nodes model.links 0 ]
+  case model.state of
+    Empty ->
+      div [] [ render_table model.nodes model.links 0 ]
+    Edit nodeId ->
+      div [] [ div [Html.Attributes.class "tree"] [ render_table model.nodes model.links 0 ],
+        div [Html.Attributes.class "edit"] [ text " " ] ]
 
 render_table : NodeList -> LinkList -> NodeId -> Html Msg
 render_table nodeList linkList nodeId =
@@ -59,9 +66,9 @@ render_table nodeList linkList nodeId =
       Just node ->
         case node of
           Range info ->
-            tr [] [ td [] [ text (info.name ++ ": " ++ {-( parse_range info)-}"") ] ]
+            tr [] [ td [] [ text (info.name ++ ": " ++ (parse_range node)) ] ]
           Set info ->
-            tr [] [ td [] [ text (info.name ++ ": " ++ {-( parse_range info)-}"") ] ]
+            tr [] [ td [] [ text (info.name ++ ": " ++ (parse_set node)) ] ]
           Search info ->
             tr [] [ td [] [ text (info.name ++ ": " ++ "Not Implemented") ] ]
           Product info ->
@@ -107,65 +114,78 @@ is_child : NodeId -> Link -> Bool
 is_child nodeId tlink =
   if tlink.from == nodeId then True else False
 
-{-
-render_table : Tree -> Html Msg
-render_table model =
-  case model of
-    LeafNode label node_type _ data ->
-      case node_type of
-        Range ->
-          tr [] [ td [] [ text (label ++ ": " ++ (parse_range data)) ] ]
-        Set ->
-          tr [] [ td [] [ text (label ++ ": " ++ (parse_set data)) ] ]
-        Search ->
-          tr [] [ td [] [ text (label ++ ": " ++ "Not Implemented") ] ]
-    CombinatorNode operation _ children ->
-      case operation of
-        Product ->
-          table [] [ tbody [] [tr [] [ ( td [] [ (text "×") ] ), (td [ Html.Attributes.class "children-table" ] (List.map render_table children )) ]]]
-        Sum ->
-          table [] [ tbody [] [tr [] [ ( td [] [ (text "+") ] ), (td [ Html.Attributes.class "children-table" ] (List.map render_table children )) ]]]
-    Empty ->
-      table [] []
--}
+clean_string : Maybe String -> String
+clean_string s =
+  case s of
+    Just s ->
+      s
+    Nothing ->
+      " "
 
-{-
-parse_range : Data -> String
-parse_range data =
+get_index : Int -> List a -> Maybe a
+get_index index list =
+  List.head (List.drop index list)
+
+parse_range_data : NodeInfo -> RangeData
+parse_range_data info =
   let
-    data_list = String.split "|" data
-    npts = case (List.head (List.drop 2 data_list)) of
-      Just a -> a
-      Nothing -> " "
-    lowpt = case (List.head (List.drop 0 data_list)) of
-      Just a -> a
-      Nothing -> " "
-    highpt = case (List.head (List.drop 1 data_list)) of
-      Just a -> a
-      Nothing -> " "
+    data_list = String.split "|" info.data
+    npts = String.toFloat (clean_string (get_index 2 data_list))
+    lowpt = String.toFloat (clean_string (get_index 0 data_list))
+    highpt = String.toFloat (clean_string (get_index 1 data_list))
+  in
+    (npts, lowpt, highpt)
+
+parse_range : Node -> String
+parse_range node =
+  let
+    info = get_info node
+    data_list = String.split "|" info.data
+    npts = clean_string (get_index 2 data_list)
+    lowpt = clean_string (get_index 0 data_list)
+    highpt = clean_string (get_index 1 data_list)
     out_string = npts ++ " points between " ++ lowpt ++ " and " ++ highpt
   in
     case (String.length out_string) > 60 of
       True ->
         let
-          out_string = String.slice 0 17 out_string
+          out_string = String.slice 0 57 out_string
         in
           out_string ++ "..."
       False ->
         out_string
 
-parse_set : Data -> String
-parse_set data =
+parse_set : Node -> String
+parse_set node =
   let
-    data_list = String.split "|" data
+    info = get_info node
+    data_list = String.split "|" info.data
     out_string = String.join ", " data_list
   in
     case (String.length out_string) > 60 of
       True ->
         let
-          out_string = String.slice 0 17 out_string
+          out_string = String.slice 0 57 out_string
         in
           out_string ++ "..."
       False ->
         out_string
--}
+
+render_edit : NodeId -> NodeList -> Html Msg
+render_edit nodeId nodeList =
+  let
+    node = get_node nodeId nodeList
+  in
+    case node of
+      Just node ->
+        case node of
+          Set info ->
+            text " "
+          Range info ->
+            text " "
+          Search info ->
+            text " "
+          _ ->
+            text " "
+      Nothing ->
+        text " "
